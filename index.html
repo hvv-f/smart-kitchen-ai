@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Kitchen AI</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f6f7ef;color:#243c30;font-family:Arial,sans-serif}
+header{padding:22px 7%;background:white;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e4e9df}
+.logo{font-size:23px;font-weight:bold;color:#2e694c}
+button,select,input{font:inherit}
+button{cursor:pointer}
+.lang{padding:9px 14px;border:1px solid #dce5d6;background:#f2f6e9;border-radius:9px;color:#285b41}
+main{max-width:1100px;margin:auto;padding:35px 20px}
+.hero{padding:30px 0 40px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.hero h1{font-size:clamp(32px,5vw,52px);line-height:1.15;margin:10px 0;color:#244c37}
+.hero p{line-height:1.8;color:#708075;max-width:520px}
+.art{font-size:100px;background:#e4edcf;border-radius:50%;padding:30px}
+.panel{background:white;border:1px solid #e5e9df;border-radius:18px;padding:27px;margin-bottom:25px}
+h2{margin-top:0}
+.muted{color:#78867b;font-size:14px;line-height:1.7}
+.search{width:100%;padding:13px;border:1px solid #dfe6db;border-radius:9px;margin:12px 0 17px}
+#ingredients{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px}
+.item{padding:12px;border:1px solid #dfe6db;border-radius:9px;background:white;text-align:start;color:#496052}
+.item.active{background:#eaf2df;border-color:#79a35f;color:#24573b;font-weight:bold}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:22px}
+.primary{padding:13px 19px;background:#2d694b;color:white;border:0;border-radius:9px;font-weight:bold}
+.secondary{padding:12px;background:white;border:1px solid #dfe6db;border-radius:9px}
+#results{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:15px;margin-top:18px}
+.recipe{padding:19px;border:1px solid #e3e9df;border-radius:13px;background:#fff}
+.recipe h3{margin-top:5px}
+.recipe a{color:#2d694b}
+.recipe li{margin:10px 0;line-height:1.6}
+.badge{font-size:12px;background:#edf4e3;color:#2d694b;border-radius:20px;padding:6px 9px}
+.assistant{background:#e8efdc}
+#answer{line-height:1.8;margin-bottom:0}
+footer{text-align:center;padding:25px;color:#849087;font-size:13px}
+[dir=rtl]{font-family:Arial,sans-serif}
+[dir=rtl] .hero{text-align:right}
+@media(max-width:600px){.hero{flex-direction:column;align-items:flex-start}.art{font-size:65px;padding:20px}.panel{padding:19px}header{padding:18px 5%}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">✦ Smart Kitchen AI</div>
+  <button class="lang" id="langBtn">العربية</button>
+</header>
+
+<main>
+<section class="hero">
+  <div>
+    <p style="color:#75934f;font-weight:bold;letter-spacing:2px">YOUR PERSONAL RECIPE ASSISTANT</p>
+    <h1 id="headline">Good food starts with<br>what you have.</h1>
+    <p id="intro">Choose the ingredients available in your kitchen and discover recipes you can prepare.</p>
+  </div>
+  <div class="art">🥗</div>
+</section>
+
+<section class="panel">
+  <h2 id="chooseTitle">What’s in your kitchen?</h2>
+  <p class="muted" id="chooseDesc">Select all ingredients you currently have.</p>
+  <input class="search" id="search" placeholder="Search ingredients...">
+  <div id="ingredients">Loading ingredients...</div>
+  <div class="controls">
+    <label id="typeLabel" for="kind">Recipe type:</label>
+    <select id="kind" class="secondary">
+      <option value="all" id="allOption">Anything</option>
+      <option value="meal" id="mealOption">Meals</option>
+      <option value="dessert" id="dessertOption">Desserts</option>
+      <option value="drink" id="drinkOption">Drinks</option>
+    </select>
+    <label><input type="checkbox" id="strict"> <span id="strictLabel">Only recipes with all required ingredients</span></label>
+    <button class="primary" id="findBtn">✦ Find my recipes</button>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 id="resultsTitle">Recipe suggestions</h2>
+  <p class="muted" id="resultsDesc">Suggestions are ranked by how closely they match your ingredients.</p>
+  <div id="results"></div>
+</section>
+
+<section class="panel assistant">
+  <h2 id="assistantTitle">✦ Kitchen helper</h2>
+  <p class="muted" id="assistantDesc">Need help getting started?</p>
+  <form id="assistantForm" class="controls">
+    <input class="search" style="flex:1;min-width:180px;margin:0" id="question" placeholder="Ask a question...">
+    <button class="primary" type="submit" id="askBtn">Ask</button>
+  </form>
+  <p id="answer"></p>
+</section>
+</main>
+
+<footer>Smart Kitchen AI · <span id="footerText">A recipe suggestion prototype</span></footer>
+
+<script>
+let lang='en';
+let ingredients=[];
+let selected=new Set();
+
+const words={
+en:{
+headline:'Good food starts with<br>what you have.',
+intro:'Choose the ingredients available in your kitchen and discover recipes you can prepare.',
+chooseTitle:'What’s in your kitchen?',chooseDesc:'Select all ingredients you currently have.',
+search:'Search ingredients...',type:'Recipe type:',all:'Anything',meal:'Meals',dessert:'Desserts',drink:'Drinks',
+strict:'Only recipes with all required ingredients',find:'✦ Find my recipes',
+results:'Recipe suggestions',resultsDesc:'Suggestions are ranked by how closely they match your ingredients.',
+assistant:'✦ Kitchen helper',assistantDesc:'Need help getting started?',question:'Ask a question...',ask:'Ask',
+footer:'A recipe suggestion prototype',matched:'% match',missing:'Missing ingredients:',steps:'Preparation steps',
+video:'Find cooking video',time:'minutes',empty:'No recipes match yet. Select more ingredients or disable strict mode.',
+choose:'Please select at least one ingredient.',help:'Select your ingredients, choose a recipe type, and click Find my recipes.',
+types:{meal:'Meal',dessert:'Dessert',drink:'Drink'}
+},
+ar:{
+headline:'الأكل الطيب يبدأ<br>بالموجود عندك.',
+intro:'اختاري المكونات الموجودة في مطبخك واكتشفي وصفات يمكنك تحضيرها.',
+chooseTitle:'شن موجود في مطبخك؟',chooseDesc:'اختاري كل المكونات المتوفرة عندك.',
+search:'ابحثي عن مكون...',type:'نوع الوصفة:',all:'أي نوع',meal:'وجبات',dessert:'حلويات',drink:'مشروبات',
+strict:'اعرضي الوصفات التي تتوفر كل مكوناتها المطلوبة',find:'✦ اقترحي وصفات',
+results:'الوصفات المقترحة',resultsDesc:'نرتب الوصفات حسب مدى تطابقها مع مكوناتك.',
+assistant:'✦ مساعد المطبخ',assistantDesc:'تحتاجي مساعدة في البداية؟',question:'اكتبي سؤالك...',ask:'اسألي',
+footer:'نموذج أولي لاقتراح الوصفات',matched:'٪ تطابق',missing:'المكونات الناقصة:',steps:'خطوات التحضير',
+video:'ابحثي عن فيديو',time:'دقيقة',empty:'لا توجد وصفات مطابقة. اختاري مكونات أكثر أو أوقفي خيار التطابق الكامل.',
+choose:'اختاري مكونًا واحدًا على الأقل.',help:'اختاري المكونات ونوع الوصفة ثم اضغطي على اقتراح وصفات.',
+types:{meal:'وجبة',dessert:'حلوى',drink:'مشروب'}
+}
+};
+function t(k){return words[lang][k]}
+function renderIngredients(){
+ let q=document.getElementById('search').value.toLocaleLowerCase();
+ let shown=ingredients.filter(x=>x.name.toLocaleLowerCase().includes(q));
+ document.getElementById('ingredients').innerHTML=shown.map(x=>
+ `<button class="item ${selected.has(x.id)?'active':''}" data-id="${x.id}">${selected.has(x.id)?'✓ ':'＋ '}${x.name}</button>`
+ ).join('')||'<p>No ingredients found</p>';
+ document.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{
+   selected.has(b.dataset.id)?selected.delete(b.dataset.id):selected.add(b.dataset.id);
+   renderIngredients();
+ });
+}
+async function loadIngredients(){
+ let r=await fetch('/api/ingredients?lang='+lang);
+ ingredients=await r.json();
+ renderIngredients();
+}
+function setLanguage(){
+ let w=words[lang];
+ document.documentElement.lang=lang;
+ document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+ document.getElementById('langBtn').textContent=lang==='en'?'العربية':'English';
+ for(let [id,key] of Object.entries({
+ headline:'headline',intro:'intro',chooseTitle:'chooseTitle',chooseDesc:'chooseDesc',
+ typeLabel:'type',allOption:'all',mealOption:'meal',dessertOption:'dessert',drinkOption:'drink',
+ strictLabel:'strict',findBtn:'find',resultsTitle:'results',resultsDesc:'resultsDesc',
+ assistantTitle:'assistant',assistantDesc:'assistantDesc',askBtn:'ask',footerText:'footer'
+ })){
+   document.getElementById(id).innerHTML=w[key];
+ }
+ document.getElementById('search').placeholder=w.search;
+ document.getElementById('question').placeholder=w.question;
+}
+document.getElementById('langBtn').onclick=async()=>{
+ lang=lang==='en'?'ar':'en';
+ setLanguage();
+ await loadIngredients();
+ document.getElementById('results').innerHTML='';
+};
+document.getElementById('search').oninput=renderIngredients;
+
+document.getElementById('findBtn').onclick=async()=>{
+ if(!selected.size){alert(t('choose'));return}
+ let response=await fetch('/api/recipes',{
+   method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({
+     ingredients:[...selected],kind:document.getElementById('kind').value,
+     strict:document.getElementById('strict').checked,lang
+   })
+ });
+ let data=await response.json();
+ let area=document.getElementById('results');
+ if(!data.recipes.length){area.innerHTML='<p>'+t('empty')+'</p>';return}
+ area.innerHTML=data.recipes.map(r=>`
+ <article class="recipe">
+   <span class="badge">${r.score}${t('matched')}</span>
+   <h3>${r.name}</h3>
+   <p>◷ ${r.time} ${t('time')}</p>
+   ${r.missing.length?'<p><b>'+t('missing')+'</b> '+r.missing.join('، ')+'</p>':''}
+   <details><summary>${t('steps')}</summary><ol>${r.steps.map(s=>'<li>'+s+'</li>').join('')}</ol></details>
+   <p><a href="${r.video}" target="_blank" rel="noopener noreferrer">${t('video')} ↗</a></p>
+ </article>`).join('');
+};
+document.getElementById('assistantForm').onsubmit=async e=>{
+ e.preventDefault();
+ let message=document.getElementById('question').value.trim();
+ if(!message)return;
+ let r=await fetch('/api/assistant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,lang})});
+ let data=await r.json();
+ document.getElementById('answer').textContent=data.answer;
+};
+setLanguage();
+loadIngredients();
+</script>
+</body>
+</html>
